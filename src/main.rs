@@ -13,6 +13,7 @@ use rocket::response::content;
 
 use std::env;
 use std::io::Read;
+use std::path::PathBuf;
 
 use hyper::Client;
 use hyper::status::StatusCode;
@@ -21,15 +22,14 @@ use hyper::header::{Headers, ContentType, Accept, UserAgent, Location};
 
 #[derive(FromForm)]
 struct Query {
-    name: String
+    q: String
 }
 
-#[get("/?<name>")]
-fn index(name: Query) ->  Result<content::HTML<String>, Redirect> {
+fn do_lookup(term: String) -> Result<content::HTML<String>, Redirect> {
     let mut client = Client::new();
     client.set_redirect_policy(hyper::client::RedirectPolicy::FollowNone);
 
-    let body = format!("s={}&submit.x=0&submit.y=0", name.name);
+    let body = format!("s={}&submit.x=0&submit.y=0", term);
     //println!("body = {}", body);
 
     let mut headers = Headers::new();
@@ -57,11 +57,22 @@ fn index(name: Query) ->  Result<content::HTML<String>, Redirect> {
         },
         _ => Err(Redirect::to("https://airnav.com/airports"))
     }
+}
 
+#[get("/<term..>")]
+fn index(term: Option<PathBuf>) ->  Result<content::HTML<String>, Redirect> {
+    match term {
+        Some(q) => do_lookup(String::from(q.to_str().unwrap())),
+        None => do_lookup(String::new()) 
+    }
+}
+
+#[get("/?<q>")]
+fn query_params(q: Query) ->  Result<content::HTML<String>, Redirect> {
+    do_lookup(q.q) 
 }
 
 fn main() {
-
     let app = match env::var("PORT") {
         Ok(ports) => {
             let port: u16 = ports.parse().unwrap();
@@ -74,5 +85,5 @@ fn main() {
         },
         Err(_) => rocket::ignite()
     };
-    app.mount("/", routes![index]).launch();
+    app.mount("/", routes![query_params]).mount("/", routes![index]).launch();
 }
