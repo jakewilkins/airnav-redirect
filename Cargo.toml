@@ -1,0 +1,9 @@
+[package]
+name = "airnav-redirect"
+version = "0.1.0"
+authors = ["Jake Wilkins <jake@jakewilkins.com>"]
+
+[dependencies]
+hyper = "0.10"
+rocket = "0.2.4"
+rocket_codegen = "0.2.4"
